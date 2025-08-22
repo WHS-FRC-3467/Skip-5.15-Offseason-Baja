@@ -2,9 +2,10 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package frc.robot.subsystems.rotary;
+package frc.robot.subsystems.arm;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Rotations;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.units.BaseUnits;
 import edu.wpi.first.units.measure.Angle;
@@ -13,29 +14,36 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.io.motor.MotorIO.PIDSlot;
 import frc.lib.mechanisms.rotary.RotaryMechanism;
-import frc.lib.util.LoggedTunableNumber;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-public class RotarySubsystem extends SubsystemBase {
+public class Arm extends SubsystemBase {
 
     private final RotaryMechanism io;
-
-    private static final LoggedTunableNumber STOW_SETPOINT = new LoggedTunableNumber("TEST", 0.0);
-    private static final LoggedTunableNumber RASIED_SETPOINT =
-        new LoggedTunableNumber("RAISED", 90);
 
     @RequiredArgsConstructor
     @Getter
     public enum Setpoint {
-        STOW(Degrees.of(STOW_SETPOINT.get())),
-        RAISED(Degrees.of(RASIED_SETPOINT.get()));
+        STOW(Degrees.of(120.18)),
+        CORAL_INTAKE(Degrees.of(135.7)),
+        LEVEL_1(Degrees.of(123)),
+        LEVEL_2(Degrees.of(97.48)),
+        LEVEL_3(Degrees.of(104.48)),
+        LEVEL_4(Degrees.of(105.4)),
+        CLIMB(Degrees.of(70.0)),
+        ALGAE_LOW(Degrees.of(103.3)),
+        ALGAE_LOW_P(Rotations.of(.2377)),
+        ALGAE_HIGH(Rotations.of(103.3)),
+        ALGAE_HIGH_P(Rotations.of(.2446)),
+        ALGAE_GROUND(Degrees.of(70.0)),
+        PROCESSOR_SCORE(Rotations.of(0.195)),
+        BARGE(Degrees.of(130.0));
 
         private final Angle setpoint;
     }
 
 
-    public RotarySubsystem(RotaryMechanism io)
+    public Arm(RotaryMechanism io)
     {
         this.io = io;
 
@@ -50,8 +58,8 @@ public class RotarySubsystem extends SubsystemBase {
     public Command setSetpoint(Setpoint setpoint)
     {
         return this.runOnce(
-            () -> io.runPosition(setpoint.getSetpoint(), RotarySubsystemConstants.CRUISE_VELOCITY,
-                RotarySubsystemConstants.ACCELERATION, RotarySubsystemConstants.JERK,
+            () -> io.runPosition(setpoint.getSetpoint(), ArmConstants.CRUISE_VELOCITY,
+                ArmConstants.ACCELERATION, ArmConstants.JERK,
                 PIDSlot.SLOT_1));
     };
 
@@ -60,7 +68,7 @@ public class RotarySubsystem extends SubsystemBase {
         return MathUtil.isNear(
             io.getPosition().in(BaseUnits.AngleUnit),
             targetPosition.in(BaseUnits.AngleUnit),
-            RotarySubsystemConstants.TOLERANCE.in(BaseUnits.AngleUnit));
+            ArmConstants.TOLERANCE.in(BaseUnits.AngleUnit));
     }
 
     public Command waitForPositionCommand(Angle position)

@@ -2,7 +2,7 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package frc.robot.subsystems.rotary;
+package frc.robot.subsystems.tounge;
 
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
@@ -31,9 +31,8 @@ import frc.lib.mechanisms.rotary.RotaryMechanism.RotaryMechCharacteristics;
 import frc.robot.Ports;
 import frc.robot.Robot;
 
-/** Add your docs here. */
-public class RotarySubsystemConstants {
-    public static String NAME = "Rotary Subsystem";
+public class ToungeConstants {
+    public static String NAME = "Tounge";
 
     public static final Angle TOLERANCE = Degrees.of(2.0);
 
@@ -99,13 +98,13 @@ public class RotarySubsystemConstants {
     public static RotaryMechanismReal getReal()
     {
         return new RotaryMechanismReal(
-            new MotorIOTalonFX(NAME, getFXConfig(), Ports.RotarySubsystemMotorMain));
+            new MotorIOTalonFX(NAME, getFXConfig(), Ports.TOUNGE));
     }
 
     public static RotaryMechanismSim getSim()
     {
         return new RotaryMechanismSim(
-            new MotorIOTalonFXSim(NAME, getFXConfig(), Ports.RotarySubsystemMotorMain),
+            new MotorIOTalonFXSim(NAME, getFXConfig(), Ports.TOUNGE),
             DCMOTOR, MOI, true, CONSTANTS);
     }
 

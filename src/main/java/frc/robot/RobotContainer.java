@@ -38,8 +38,10 @@ import frc.robot.commands.autos.BranchingAuto;
 import frc.robot.commands.autos.ExampleAuto;
 import frc.robot.commands.autos.NoneAuto;
 import frc.robot.commands.autos.WheelCharacterizationAuto;
-import frc.robot.subsystems.beambreak1.BeamBreak1;
-import frc.robot.subsystems.beambreak1.BeamBreak1Constants;
+import frc.robot.subsystems.clawroller.ClawRoller;
+import frc.robot.subsystems.clawroller.ClawRollerConstants;
+import frc.robot.subsystems.clawrollerlasercan.ClawRollerLaserCAN;
+import frc.robot.subsystems.clawrollerlasercan.ClawRollerLaserCANConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveConstants;
 import frc.robot.subsystems.drive.GyroIO;
@@ -47,21 +49,16 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
-import frc.robot.subsystems.flywheel.Flywheel;
-import frc.robot.subsystems.flywheel.FlywheelConstants;
+import frc.robot.subsystems.elevator.Elevator;
+import frc.robot.subsystems.elevator.ElevatorConstants;
 import frc.robot.subsystems.leds.LEDs;
 import frc.robot.subsystems.leds.LEDsConstants;
-import frc.robot.subsystems.linear.Linear;
-import frc.robot.subsystems.linear.LinearConstants;
-import frc.robot.subsystems.rotary.RotarySubsystem;
-import frc.robot.subsystems.rotary.RotarySubsystemConstants;
-import frc.robot.subsystems.rotary.RotarySubsystem.Setpoint;
-import frc.robot.subsystems.servo1.Servo1;
-import frc.robot.subsystems.servo1.Servo1Constants;
+import frc.robot.subsystems.tounge.Tounge;
+import frc.robot.subsystems.tounge.Tounge;
+import frc.robot.subsystems.tounge.Tounge.Setpoint;
+import frc.robot.subsystems.tounge.ToungeConstants;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionConstants;
-import frc.robot.subsystems.lasercan1.LaserCAN1;
-import frc.robot.subsystems.lasercan1.LaserCAN1Constants;
 import java.util.ArrayList;
 import java.util.Arrays;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
@@ -77,13 +74,11 @@ public class RobotContainer {
     // Subsystems
     public final Drive drive;
     private final LEDs leds;
-    private final LaserCAN1 laserCAN1;
-    private final BeamBreak1 beamBreak1;
-    private final Servo1 servo1;
-    private final Flywheel flywheel;
-    private final Linear linear;
+    private final ClawRollerLaserCAN laserCAN1;
+    private final ClawRoller flywheel;
+    private final Elevator linear;
     private final Vision vision;
-    private final RotarySubsystem rotary;
+    private final Tounge tounge;
 
     // Controller
     private final CommandXboxControllerExtended controller = new CommandXboxControllerExtended(0);
@@ -109,12 +104,10 @@ public class RobotContainer {
                     new ModuleIOTalonFX(DriveConstants.BackRight));
 
                 leds = new LEDs(LEDsConstants.getLightsIOReal());
-                laserCAN1 = new LaserCAN1(LaserCAN1Constants.getReal());
-                beamBreak1 = new BeamBreak1(BeamBreak1Constants.getReal());
-                servo1 = new Servo1(Servo1Constants.getReal());
-                flywheel = new Flywheel(FlywheelConstants.getReal());
+                laserCAN1 = new ClawRollerLaserCAN(ClawRollerLaserCANConstants.getReal());
+                flywheel = new ClawRoller(ClawRollerConstants.getReal());
 
-                linear = new Linear(LinearConstants.getReal());
+                linear = new Elevator(ElevatorConstants.getReal());
                 vision = new Vision(
                     drive::addVisionMeasurement,
                     () -> drive.getTimestampedHeading(),
@@ -123,7 +116,7 @@ public class RobotContainer {
                         VisionConstants.robotToCamera0,
                         VisionConstants.aprilTagLayout,
                         PoseStrategy.CONSTRAINED_SOLVEPNP));
-                rotary = new RotarySubsystem(RotarySubsystemConstants.getReal());
+                tounge = new Tounge(ToungeConstants.getReal());
             }
 
             case SIM -> {
@@ -137,13 +130,10 @@ public class RobotContainer {
 
                 leds = new LEDs(LEDsConstants.getLightsIOSim());
                 laserCAN1 =
-                    new LaserCAN1(LaserCAN1Constants.getSim());
-                beamBreak1 = new BeamBreak1(
-                    BeamBreak1Constants.getSim());
-                servo1 = new Servo1(Servo1Constants.getSim());
-                flywheel = new Flywheel(FlywheelConstants.getSim());
+                    new ClawRollerLaserCAN(ClawRollerLaserCANConstants.getSim());
+                flywheel = new ClawRoller(ClawRollerConstants.getSim());
 
-                linear = new Linear(LinearConstants.getSim());
+                linear = new Elevator(ElevatorConstants.getSim());
                 vision = new Vision(
                     drive::addVisionMeasurement,
                     () -> drive.getTimestampedHeading(),
@@ -153,7 +143,7 @@ public class RobotContainer {
                         VisionConstants.robotToCamera0,
                         VisionConstants.aprilTagLayout,
                         PoseStrategy.CONSTRAINED_SOLVEPNP));
-                rotary = new RotarySubsystem(RotarySubsystemConstants.getSim());
+                tounge = new Tounge(ToungeConstants.getSim());
             }
 
             default -> {
@@ -167,14 +157,11 @@ public class RobotContainer {
 
                 leds = new LEDs(LEDsConstants.getLightsIOReplay());
                 laserCAN1 =
-                    new LaserCAN1(LaserCAN1Constants.getReplay());
-                beamBreak1 =
-                    new BeamBreak1(BeamBreak1Constants.getReplay());
-                servo1 = new Servo1(Servo1Constants.getReplay());
-                flywheel = new Flywheel(FlywheelConstants.getReplay());
+                    new ClawRollerLaserCAN(ClawRollerLaserCANConstants.getReplay());
+                flywheel = new ClawRoller(ClawRollerConstants.getReplay());
 
-                linear = new Linear(LinearConstants.getReplay());
-                rotary = new RotarySubsystem(RotarySubsystemConstants.getReplay());
+                linear = new Elevator(ElevatorConstants.getReplay());
+                tounge = new Tounge(ToungeConstants.getReplay());
                 vision = new Vision(
                     drive::addVisionMeasurement,
                     () -> drive.getTimestampedHeading(),
@@ -260,8 +247,8 @@ public class RobotContainer {
                 0.0, false, PathConstants.PATHGENERATION_DRIVE_TOLERANCE,
                 PathConstants.PATHGENERATION_ROT_TOLERANCE_DEGREES));
 
-        SmartDashboard.putData("Linear: Stow", linear.goToSetpoint(Linear.Setpoint.STOW));
-        SmartDashboard.putData("Linear: Raised", linear.goToSetpoint(Linear.Setpoint.RAISED));
+        SmartDashboard.putData("Linear: Stow", linear.goToSetpoint(Elevator.Setpoint.STOW));
+        SmartDashboard.putData("Linear: Raised", linear.goToSetpoint(Elevator.Setpoint.RAISED));
         SmartDashboard.putData("Linear: Home", linear.homeCommand());
     }
 

@@ -16,29 +16,28 @@
 package frc.robot;
 
 import frc.lib.util.Device;
-import frc.lib.util.Device.CAN;
-import frc.lib.util.Device.DIO;
-import frc.lib.util.Device.PWM;
 
 public class Ports {
     /*
      * LIST OF CHANNEL AND CAN IDS
      */
 
-    public static final Device.CAN laserCAN1 = new CAN(0, "rio");
-    public static final Device.CAN lights = new CAN(1, "rio");
-    public static final Device.CAN flywheel = new CAN(2, "rio");
+    public static final Device.CAN MITOCANDRIA = new Device.CAN(15, "rio");
+    public static final Device.CAN CLAW_LASERCAN = new Device.CAN(16, "rio");
+    public static final Device.CAN CLAW_ROLLER = new Device.CAN(17, "rio");
 
+    public static final Device.CAN ARM_CANCODER = new Device.CAN(18, "rio");
+    public static final Device.CAN ARM_MAIN = new Device.CAN(19, "rio");
 
-    public static final Device.CAN linear = new CAN(5, "rio");
+    public static final Device.CAN ELEVATOR_CANDLE = new Device.CAN(20, "rio");
 
-    public static final Device.DIO diobeambreak = new DIO(0);
+    public static final Device.CAN ELEVATOR_MAIN = new Device.CAN(22, "rio"); // Top Kraken
+    public static final Device.CAN ELEVATOR_FOLLOWER = new Device.CAN(23, "rio"); // Bottom Kraken
 
-    public static final Device.CAN pdh = new CAN(50, "rio");
+    public static final Device.CAN CLIMBER = new Device.CAN(24, "Drivetrain");
 
-    public static final Device.CAN RotarySubsystemMotorMain = new CAN(3, "rio");
-    public static final Device.CAN RotarySubsystemMotorFollower = new CAN(4, "rio");
+    public static final Device.CAN PDH = new Device.CAN(25, "rio");
 
-    public static final Device.PWM servo1 = new PWM(1);
+    public static final Device.CAN TOUNGE = new Device.CAN(30, "rio");
 
 }

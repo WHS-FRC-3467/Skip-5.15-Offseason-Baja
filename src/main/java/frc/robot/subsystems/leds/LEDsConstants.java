@@ -56,7 +56,7 @@ public class LEDsConstants {
 
     public static final LightsIOCandle getLightsIOReal()
     {
-        return new LightsIOCandle(NAME, Ports.lights, CANDLE_CONFIG);
+        return new LightsIOCandle(NAME, Ports.ELEVATOR_CANDLE, CANDLE_CONFIG);
     }
 
     public static final LightsIOSim getLightsIOSim()

@@ -66,7 +66,7 @@ public class Robot extends LoggedRobot {
                 // Running on a real robot, log to a USB stick ("/U/logs")
                 Logger.addDataReceiver(new WPILOGWriter());
                 Logger.addDataReceiver(new NT4Publisher());
-                LoggedPowerDistribution.getInstance(Ports.pdh.id(), ModuleType.kRev);
+                LoggedPowerDistribution.getInstance(Ports.PDH.id(), ModuleType.kRev);
             }
 
             case SIM -> {
@@ -112,11 +112,13 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void robotInit() {
-        /* 
-         * Due to the nature of how Java works, the first run of a pathfinding command could have a significantly higher delay compared with subsequent runs.
-         * To help alleviate this issue, run this warmup command in the background when code starts.
-         * This command will not control the robot, it will simply run through a full pathfinding command to warm up the library.
+    public void robotInit()
+    {
+        /*
+         * Due to the nature of how Java works, the first run of a pathfinding command could have a
+         * significantly higher delay compared with subsequent runs. To help alleviate this issue,
+         * run this warmup command in the background when code starts. This command will not control
+         * the robot, it will simply run through a full pathfinding command to warm up the library.
          * Source: PathPlanner Docs
          */
         // DO THIS AFTER CONFIGURATION OF YOUR DESIRED PATHFINDER
