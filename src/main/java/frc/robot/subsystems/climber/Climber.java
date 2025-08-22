@@ -7,10 +7,8 @@ package frc.robot.subsystems.climber;
 import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Volts;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
-import edu.wpi.first.units.BaseUnits;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -72,4 +70,6 @@ public class Climber extends SubsystemBase {
             runOnce(() -> io.setEncoderPosition(Rotations.of(0))),
             setSetpoint(Setpoint.HOME));
     }
+
+    // TODO: Add climb sequence Triggers
 }

@@ -7,8 +7,10 @@ package frc.robot.subsystems.elevator;
 import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Volts;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
+import edu.wpi.first.units.BaseUnits;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -17,6 +19,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.io.motor.MotorIO.PIDSlot;
 import frc.lib.mechanisms.linear.LinearMechanism;
 import frc.lib.util.LoggedTunableNumber;
+import frc.robot.subsystems.arm.ArmConstants;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -68,11 +71,33 @@ public class Elevator extends SubsystemBase {
         io.periodic();
     }
 
-    public Command goToSetpoint(Setpoint setpoint)
+    public Command setSetpoint(Setpoint setpoint)
     {
-        return this
-            .runOnce(() -> io.runPosition(setpoint.getSetpoint(), ElevatorConstants.CRUISE_VELOCITY,
-                ElevatorConstants.ACCELERATION, ElevatorConstants.JERK, PIDSlot.SLOT_1));
+        return this.runOnce(
+            () -> io.runPosition(setpoint.getSetpoint(), ArmConstants.CRUISE_VELOCITY,
+                ArmConstants.ACCELERATION, ArmConstants.JERK,
+                PIDSlot.SLOT_1));
+    };
+
+    public boolean nearPosition(Angle targetPosition)
+    {
+        return MathUtil.isNear(
+            io.getPosition().in(BaseUnits.AngleUnit),
+            targetPosition.in(BaseUnits.AngleUnit),
+            ArmConstants.TOLERANCE.in(BaseUnits.AngleUnit));
+    }
+
+    public Command waitForPositionCommand(Angle position)
+    {
+        return Commands.waitUntil(() -> {
+            return nearPosition(position);
+        });
+    }
+
+    public Command setpointCommandWithWait(Setpoint setpoint)
+    {
+        return waitForPositionCommand(setpoint.getSetpoint())
+            .deadlineFor(setSetpoint(setpoint));
     }
 
     public Command homeCommand()
@@ -81,6 +106,6 @@ public class Elevator extends SubsystemBase {
             runOnce(() -> io.runVoltage(Volts.of(-2))),
             Commands.waitUntil(homedTrigger),
             runOnce(() -> io.setEncoderPosition(Setpoint.STOW.getSetpoint())),
-            goToSetpoint(Setpoint.STOW));
+            setSetpoint(Setpoint.STOW));
     }
 }

@@ -6,20 +6,24 @@ package frc.robot.subsystems.clawroller;
 
 import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.io.motor.MotorIO.PIDSlot;
 import frc.lib.mechanisms.flywheel.FlywheelMechanism;
 import frc.robot.subsystems.elevator.ElevatorConstants;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-/** Add your docs here. */
 public class ClawRoller extends SubsystemBase { // Don't extend if contained in superstructure
     private final FlywheelMechanism io;
+    public final Trigger stalled;
+    public final Trigger stopped;
+    public final Trigger freeSpin;
 
     @RequiredArgsConstructor
     @Getter
@@ -36,16 +40,13 @@ public class ClawRoller extends SubsystemBase { // Don't extend if contained in 
     {
         this.io = io;
 
-        // public final Trigger stalled =
-        // new Trigger(
-        // () -> (Math.abs(super.inputs.velocityRps) <= 0.02
-        // && super.inputs.supplyCurrentAmps[0] >= 1));
+        stalled = new Trigger(() -> io.getSupplyCurrent().abs(Amps) >= 1
+            && io.getVelocity().abs(RotationsPerSecond) < .02);
 
-        // public final Trigger stopped =
-        // new Trigger(() -> (Math.abs(super.inputs.velocityRps) <= 0.02));
+        stopped = new Trigger(() -> io.getVelocity().abs(RotationsPerSecond) < .02);
 
-        // public final Trigger freeSpin =
-        // new Trigger(() -> (Math.abs(super.inputs.velocityRps) >= 10));
+        freeSpin = new Trigger(() -> io.getVelocity().abs(RotationsPerSecond) >= 10);
+
     }
 
     @Override

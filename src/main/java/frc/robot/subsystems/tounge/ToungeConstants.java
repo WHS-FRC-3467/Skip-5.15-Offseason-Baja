@@ -5,11 +5,16 @@
 package frc.robot.subsystems.tounge;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.Kilograms;
 import static edu.wpi.first.units.Units.Radians;
+import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.Pounds;
 import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
@@ -34,24 +39,23 @@ import frc.robot.Robot;
 public class ToungeConstants {
     public static String NAME = "Tounge";
 
-    public static final Angle TOLERANCE = Degrees.of(2.0);
+    public static final Angle TOLERANCE = Rotations.of(.1);
 
-    public static final AngularVelocity CRUISE_VELOCITY = Units.RadiansPerSecond.of(2 * Math.PI);
-    public static final AngularAcceleration ACCELERATION =
-        CRUISE_VELOCITY.div(0.1).per(Units.Second);
+    public static final AngularVelocity CRUISE_VELOCITY = RotationsPerSecond.of(1.0);
+    public static final AngularAcceleration ACCELERATION = RotationsPerSecondPerSecond.of(1.0);
     public static final Velocity<AngularAccelerationUnit> JERK = ACCELERATION.per(Second);
 
-    private static final double GEARING = (2.0 / 1.0);
+    private static final double GEARING = (1.0);
 
     private static final Angle MIN_ANGLE = Degrees.of(0.0);
     private static final Angle MAX_ANGLE = Degrees.of(90.0);
     private static final Angle STARTING_ANGLE = Radians.of(0.0);
-    private static final Distance ARM_LENGTH = Meters.of(1.0);
+    private static final Distance ARM_LENGTH = Inches.of(8.0);
 
     private static final RotaryMechCharacteristics CONSTANTS =
         new RotaryMechCharacteristics(ARM_LENGTH, MIN_ANGLE, MAX_ANGLE, STARTING_ANGLE);
 
-    private static final Mass ARM_MASS = Kilograms.of(.01);
+    private static final Mass ARM_MASS = Pounds.of(.1);
     private static final DCMotor DCMOTOR = DCMotor.getKrakenX60(1);
     public static final MomentOfInertia MOI = KilogramSquareMeters
         .of(SingleJointedArmSim.estimateMOI(ARM_LENGTH.in(Meters), ARM_MASS.in(Kilograms)));
@@ -67,12 +71,10 @@ public class ToungeConstants {
         TalonFXConfiguration config = new TalonFXConfiguration();
 
         config.CurrentLimits.SupplyCurrentLimitEnable = Robot.isReal();
-        config.CurrentLimits.SupplyCurrentLimit = 40.0;
-        config.CurrentLimits.SupplyCurrentLowerLimit = 40.0;
-        config.CurrentLimits.SupplyCurrentLowerTime = 0.1;
+        config.CurrentLimits.SupplyCurrentLimit = 30.0;
 
         config.CurrentLimits.StatorCurrentLimitEnable = Robot.isReal();
-        config.CurrentLimits.StatorCurrentLimit = 80.0;
+        config.CurrentLimits.StatorCurrentLimit = 55.0;
 
         config.Voltage.PeakForwardVoltage = 12.0;
         config.Voltage.PeakReverseVoltage = -12.0;

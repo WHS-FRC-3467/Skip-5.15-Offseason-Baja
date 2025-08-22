@@ -15,27 +15,47 @@
 
 package frc.robot.subsystems.vision;
 
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
+import org.littletonrobotics.junction.Logger;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Filesystem;
 
 public class VisionConstants {
     // AprilTag layout
-    public static AprilTagFieldLayout aprilTagLayout =
-        AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+    public static AprilTagFieldLayout aprilTagLayout;
+    private static boolean usedCustomField = false;
+    static {
+        try {
+            aprilTagLayout =
+                new AprilTagFieldLayout(Path
+                    .of(Filesystem.getDeployDirectory().getAbsolutePath()
+                        + "/vision/welded.json"));
+            usedCustomField = true;
+        } catch (Exception e) {
+            aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+        }
+        Logger.recordOutput("Used Custom Field?", usedCustomField);
+    }
 
     // Camera names, must match names configured on coprocessor
-    public static String camera0Name = "camera_0";
-    public static String camera1Name = "camera_1";
+    public static String camera0Name = "front_left";
+    public static String camera1Name = "front_right";
 
     // Robot to camera transforms
-    // (Not used by Limelight, configure in web UI instead)
     public static Transform3d robotToCamera0 =
-        new Transform3d(0.2, 0.0, 0.2, new Rotation3d(0.0, -0.4, 0.0));
+        new Transform3d(Units.inchesToMeters(9.287), Units.inchesToMeters(10.9704),
+            Units.inchesToMeters(7.9167),
+            new Rotation3d(0.0, Units.degreesToRadians(-15), Units.degreesToRadians(-30)));
     public static Transform3d robotToCamera1 =
-        new Transform3d(-0.2, 0.0, 0.2, new Rotation3d(0.0, -0.4, Math.PI));
-
+        new Transform3d(Units.inchesToMeters(9.287), Units.inchesToMeters(-10.9704),
+            Units.inchesToMeters(7.9167),
+            new Rotation3d(0.0, Units.degreesToRadians(-15), Units.degreesToRadians(30)));
     // Basic filtering thresholds
     public static double maxAmbiguity = 0.3;
     public static double maxZError = 0.75;
@@ -51,4 +71,6 @@ public class VisionConstants {
             1.0, // Camera 0
             1.0 // Camera 1
     };
+
+    public static List<Integer> rejectedTags = Arrays.asList(2, 3, 4, 5, 14, 15, 16);
 }

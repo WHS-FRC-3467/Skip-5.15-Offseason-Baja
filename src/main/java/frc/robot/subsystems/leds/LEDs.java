@@ -28,6 +28,7 @@ public class LEDs extends SubsystemBase {
         lights = new Lights(io);
     }
 
+    // TODO: Copy settings and animations
     public Command runDisabledAnimation()
     {
         return this.startEnd(

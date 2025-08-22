@@ -54,17 +54,17 @@ public class LEDsConstants {
             .withStripType(StripTypeValue.RGB)
             .withLossOfSignalBehavior(LossOfSignalBehaviorValue.DisableLEDs));
 
-    public static final LightsIOCandle getLightsIOReal()
+    public static final LightsIOCandle getReal()
     {
         return new LightsIOCandle(NAME, Ports.ELEVATOR_CANDLE, CANDLE_CONFIG);
     }
 
-    public static final LightsIOSim getLightsIOSim()
+    public static final LightsIOSim getSim()
     {
         return new LightsIOSim(NAME);
     }
 
-    public static final LightsIO getLightsIOReplay()
+    public static final LightsIO getReplay()
     {
         return new LightsIO() {};
     }

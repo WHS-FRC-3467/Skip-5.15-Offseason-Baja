@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.lib.io.vision.VisionIO;
 import frc.lib.io.vision.VisionIOPhotonVision;
@@ -38,10 +39,14 @@ import frc.robot.commands.autos.BranchingAuto;
 import frc.robot.commands.autos.ExampleAuto;
 import frc.robot.commands.autos.NoneAuto;
 import frc.robot.commands.autos.WheelCharacterizationAuto;
+import frc.robot.subsystems.arm.Arm;
+import frc.robot.subsystems.arm.ArmConstants;
 import frc.robot.subsystems.clawroller.ClawRoller;
 import frc.robot.subsystems.clawroller.ClawRollerConstants;
 import frc.robot.subsystems.clawrollerlasercan.ClawRollerLaserCAN;
 import frc.robot.subsystems.clawrollerlasercan.ClawRollerLaserCANConstants;
+import frc.robot.subsystems.climber.Climber;
+import frc.robot.subsystems.climber.ClimberConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveConstants;
 import frc.robot.subsystems.drive.GyroIO;
@@ -61,6 +66,8 @@ import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionConstants;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.function.Supplier;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 
 /**
@@ -72,21 +79,26 @@ import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 @SuppressWarnings("unused")
 public class RobotContainer {
     // Subsystems
-    public final Drive drive;
-    private final LEDs leds;
-    private final ClawRollerLaserCAN laserCAN1;
-    private final ClawRoller flywheel;
-    private final Elevator linear;
-    private final Vision vision;
+    private final Drive drive;
+    private final Elevator elevator;
+    private final Arm arm;
+    private final ClawRoller clawroller;
+    private final ClawRollerLaserCAN clawLaserCAN;
     private final Tounge tounge;
+    private final Climber climber;
+    private final LEDs leds;
+    private final Vision vision;
 
     // Controller
     private final CommandXboxControllerExtended controller = new CommandXboxControllerExtended(0);
 
     // Dashboard inputs
     private final LoggedDashboardChooser<AutoCommand> autoChooser;
-    private final LoggedDashboardChooser<Boolean> conditionalChooser;
     public static Field2d autoPreviewField = new Field2d();
+
+    // Trigger for algae/coral mode switching
+    @AutoLogOutput
+    private Trigger isCoralMode;
 
     /**
      * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -102,12 +114,13 @@ public class RobotContainer {
                     new ModuleIOTalonFX(DriveConstants.FrontRight),
                     new ModuleIOTalonFX(DriveConstants.BackLeft),
                     new ModuleIOTalonFX(DriveConstants.BackRight));
-
-                leds = new LEDs(LEDsConstants.getLightsIOReal());
-                laserCAN1 = new ClawRollerLaserCAN(ClawRollerLaserCANConstants.getReal());
-                flywheel = new ClawRoller(ClawRollerConstants.getReal());
-
-                linear = new Elevator(ElevatorConstants.getReal());
+                elevator = new Elevator(ElevatorConstants.getReal());
+                arm = new Arm(ArmConstants.getReal());
+                clawroller = new ClawRoller(ClawRollerConstants.getReal());
+                clawLaserCAN = new ClawRollerLaserCAN(ClawRollerLaserCANConstants.getReal());
+                tounge = new Tounge(ToungeConstants.getReal());
+                climber = new Climber(ClimberConstants.getReal());
+                leds = new LEDs(LEDsConstants.getReal());
                 vision = new Vision(
                     drive::addVisionMeasurement,
                     () -> drive.getTimestampedHeading(),
@@ -115,8 +128,12 @@ public class RobotContainer {
                         VisionConstants.camera0Name,
                         VisionConstants.robotToCamera0,
                         VisionConstants.aprilTagLayout,
+                        PoseStrategy.CONSTRAINED_SOLVEPNP),
+                    new VisionIOPhotonVision(
+                        VisionConstants.camera1Name,
+                        VisionConstants.robotToCamera1,
+                        VisionConstants.aprilTagLayout,
                         PoseStrategy.CONSTRAINED_SOLVEPNP));
-                tounge = new Tounge(ToungeConstants.getReal());
             }
 
             case SIM -> {
@@ -127,13 +144,13 @@ public class RobotContainer {
                     new ModuleIOSim(DriveConstants.FrontRight),
                     new ModuleIOSim(DriveConstants.BackLeft),
                     new ModuleIOSim(DriveConstants.BackRight));
-
-                leds = new LEDs(LEDsConstants.getLightsIOSim());
-                laserCAN1 =
-                    new ClawRollerLaserCAN(ClawRollerLaserCANConstants.getSim());
-                flywheel = new ClawRoller(ClawRollerConstants.getSim());
-
-                linear = new Elevator(ElevatorConstants.getSim());
+                elevator = new Elevator(ElevatorConstants.getSim());
+                arm = new Arm(ArmConstants.getSim());
+                clawroller = new ClawRoller(ClawRollerConstants.getSim());
+                clawLaserCAN = new ClawRollerLaserCAN(ClawRollerLaserCANConstants.getSim());
+                tounge = new Tounge(ToungeConstants.getSim());
+                climber = new Climber(ClimberConstants.getSim());
+                leds = new LEDs(LEDsConstants.getSim());
                 vision = new Vision(
                     drive::addVisionMeasurement,
                     () -> drive.getTimestampedHeading(),
@@ -142,8 +159,13 @@ public class RobotContainer {
                         VisionConstants.camera0Name,
                         VisionConstants.robotToCamera0,
                         VisionConstants.aprilTagLayout,
+                        PoseStrategy.CONSTRAINED_SOLVEPNP),
+                    new VisionIOPhotonVisionSim(
+                        () -> drive.getPose(),
+                        VisionConstants.camera1Name,
+                        VisionConstants.robotToCamera1,
+                        VisionConstants.aprilTagLayout,
                         PoseStrategy.CONSTRAINED_SOLVEPNP));
-                tounge = new Tounge(ToungeConstants.getSim());
             }
 
             default -> {
@@ -154,24 +176,20 @@ public class RobotContainer {
                     new ModuleIO() {},
                     new ModuleIO() {},
                     new ModuleIO() {});
-
-                leds = new LEDs(LEDsConstants.getLightsIOReplay());
-                laserCAN1 =
-                    new ClawRollerLaserCAN(ClawRollerLaserCANConstants.getReplay());
-                flywheel = new ClawRoller(ClawRollerConstants.getReplay());
-
-                linear = new Elevator(ElevatorConstants.getReplay());
+                elevator = new Elevator(ElevatorConstants.getReplay());
+                arm = new Arm(ArmConstants.getReplay());
+                clawroller = new ClawRoller(ClawRollerConstants.getReplay());
+                clawLaserCAN = new ClawRollerLaserCAN(ClawRollerLaserCANConstants.getReplay());
                 tounge = new Tounge(ToungeConstants.getReplay());
+                climber = new Climber(ClimberConstants.getReplay());
+                leds = new LEDs(LEDsConstants.getReplay());
                 vision = new Vision(
                     drive::addVisionMeasurement,
                     () -> drive.getTimestampedHeading(),
+                    new VisionIO() {},
                     new VisionIO() {});
             }
         }
-
-        conditionalChooser = new LoggedDashboardChooser<>("Conditional Choice");
-        conditionalChooser.addOption("True", true);
-        conditionalChooser.addOption("False", false);
 
         // Set up auto routines
         autoChooser = new LoggedDashboardChooser<>("Auto Choices");
@@ -179,8 +197,6 @@ public class RobotContainer {
 
         autoChooser.addDefaultOption("None", new NoneAuto());
         autoChooser.addOption("ExampleAuto", new ExampleAuto(drive));
-        autoChooser.addOption("BranchingAuto",
-            new BranchingAuto(drive, () -> conditionalChooser.get()));
 
         autoChooser.onChange(auto -> {
             autoPreviewField.getObject("path").setPoses(auto.getAllPathPoses());
@@ -202,54 +218,171 @@ public class RobotContainer {
     private void configureButtonBindings()
     {
         // Default command, normal field-relative drive
-        drive.setDefaultCommand(
-            DriveCommands.joystickDrive(
-                drive,
-                () -> -controller.getLeftY(),
-                () -> -controller.getLeftX(),
-                () -> -controller.getRightX()));
+        drive.setDefaultCommand(joystickDrive());
 
-        // Lock to 0° when A button is held
+        // Align Right
+        controller
+            .rightBumper()
+            .and(isCoralMode)
+            .whileTrue(null);
+
+        // Align left
+        controller
+            .leftBumper()
+            .and(isCoralMode)
+            .whileTrue(null);
+
+        // Descore Algae
+        controller
+            .leftBumper()
+            .and(controller.rightBumper())
+            .and(isCoralMode.negate())
+            .whileTrue(null);
+
+        // Score L1 left
+        controller
+            .leftBumper()
+            .and(controller.a())
+            .whileTrue(null);
+
+        // Score L1 right
+        controller
+            .rightBumper()
+            .and(controller.a())
+            .whileTrue(null);
+
+        // Prep for L1 Score, or ground algae intake
         controller
             .a()
-            .whileTrue(
-                DriveCommands.joystickDriveAtAngle(
-                    drive,
-                    () -> -controller.getLeftY(),
-                    () -> -controller.getLeftX(),
-                    () -> new Rotation2d()));
+            .onTrue(null)
+            .whileTrue(null);
 
-        // Switch to X pattern when X button is pressed
-        controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+        // Algae Descore to Lower Claw - Processor
+        controller
+            .start()
+            .whileTrue(null);
 
-        // Reset gyro to 0° when B button is pressed
+        // L2 Coral
+        controller
+            .x()
+            .and(isCoralMode)
+            .onTrue(
+                superStructureCommand(
+                    Arm.Setpoint.LEVEL_2,
+                    Elevator.Setpoint.LEVEL_2));
+
+        // Algae Lolipop Collect
+        controller
+            .x()
+            .and(isCoralMode.negate())
+            .onTrue(
+                Commands.sequence(
+                    superStructureCommand(
+                        Arm.Setpoint.PROCESSOR_SCORE,
+                        Elevator.Setpoint.ALGAE_LOLLIPOP),
+                    clawroller.algaeForward(),
+                    Commands.waitUntil(clawroller.stalled),
+                    superStructureCommand(
+                        Arm.Setpoint.STOW,
+                        Elevator.Setpoint.STOW)))
+            .whileTrue(null); // Face driverstation
+
+        // L3 Coral
         controller
             .b()
+            .and(isCoralMode)
             .onTrue(
-                Commands.runOnce(
-                    () -> drive.setPose(
-                        new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
-                    drive)
-                    .ignoringDisable(true));
+                superStructureCommand(
+                    Arm.Setpoint.LEVEL_3,
+                    Elevator.Setpoint.LEVEL_3));
 
-        // Pathfind to Pose when the Y button is pressed
-        controller.y().onTrue(
-            DriveCommands.pathFindToPose(() -> drive.getPose(), new Pose2d(3, 3, Rotation2d.kZero),
-                PathConstants.ON_THE_FLY_PATH_CONSTRAINTS, 0.0,
-                PathConstants.PATHGENERATION_DRIVE_TOLERANCE));
+        // Processor Score
+        controller
+            .b()
+            .and(isCoralMode.negate())
+            .onTrue(
+                superStructureCommand(
+                    Arm.Setpoint.PROCESSOR_SCORE,
+                    Elevator.Setpoint.STOW))
+            .whileTrue(null); // Align to processor
 
-        // On-the-fly path with waypoints while the Right Bumper is held
-        controller.rightBumper().whileTrue(
-            new OnTheFlyPathCommand(drive, () -> drive.getPose(), new ArrayList<>(Arrays.asList()), // List
-                                                                                                    // of
-                                                                                                    // waypoints
-                new Pose2d(6, 6, Rotation2d.k180deg), PathConstants.ON_THE_FLY_PATH_CONSTRAINTS,
-                0.0, false, PathConstants.PATHGENERATION_DRIVE_TOLERANCE,
-                PathConstants.PATHGENERATION_ROT_TOLERANCE_DEGREES));
+        // L4 Coral
+        controller
+            .y()
+            .and(isCoralMode)
+            .onTrue(
+                superStructureCommand(
+                    Arm.Setpoint.LEVEL_4,
+                    Elevator.Setpoint.LEVEL_4));
 
-        SmartDashboard.putData("Linear: Stow", linear.goToSetpoint(Elevator.Setpoint.STOW));
-        SmartDashboard.putData("Linear: Raised", linear.goToSetpoint(Elevator.Setpoint.RAISED));
-        SmartDashboard.putData("Linear: Home", linear.homeCommand());
+        // Algae Barge
+        controller
+            .y()
+            .and(isCoralMode.negate())
+            .onTrue(null);
+
+        // Score Coral or Algae
+        controller
+            .rightTrigger()
+            .and(controller.a().negate())
+            .onTrue(
+                Commands.either(
+                    Commands.sequence(
+                        clawroller.score(),
+                        Commands.waitUntil(clawLaserCAN.triggered.negate()),
+                        Commands.waitSeconds(0.2),
+                        clawroller.stop(),
+                        superStructureCommand(
+                            Arm.Setpoint.STOW,
+                            Elevator.Setpoint.STOW)),
+
+                    Commands.sequence(null),
+
+                    isCoralMode));
+
+        // Coral Intake
+        controller
+            .leftTrigger()
+            .whileTrue(null)
+            .onFalse(null);
+
+        // Climb Sequence
+        controller
+            .back()
+            .onTrue(null);
+
+        // Elevator Stow Override
+        controller
+            .povLeft()
+            .onTrue(
+                Commands.sequence(
+                    elevator.setSetpoint(Elevator.Setpoint.STOW),
+                    tounge.setSetpoint(Tounge.Setpoint.DOWN),
+                    clawroller.score()))
+            .onFalse(
+                Commands.parallel(
+                    clawroller.stop(),
+                    tounge.setSetpoint(Tounge.Setpoint.STOW)));
+
+        // Climber Sequence Reset
+        controller
+            .povRight()
+            .onTrue(null);
+
+        // Unjam
+        controller
+            .povUp()
+            .onTrue(
+                Commands.parallel(
+                    arm.setSetpoint(Arm.Setpoint.LEVEL_2),
+                    elevator.setSetpoint(Elevator.Setpoint.LEVEL_3)));
+
+        // Elevator Homing
+        controller.povDown()
+            .onTrue(
+                Commands.sequence(
+                    arm.setpointCommandWithWait(Arm.Setpoint.STOW),
+                    elevator.homeCommand()));
     }
 
     /**
@@ -261,4 +394,33 @@ public class RobotContainer {
     {
         return autoChooser.get();
     }
+
+    public Command superStructureCommand(Arm.Setpoint armSetpoint,
+        Elevator.Setpoint elevatorSetpoint)
+    {
+        return Commands.sequence(
+            // Always move Arm to STOW position before moving Elevator
+            arm.setpointCommandWithWait(Arm.Setpoint.STOW),
+            // Move Elevator to new position
+            elevator.setpointCommandWithWait(elevatorSetpoint),
+            // Reposition Arm to new position
+            arm.setpointCommandWithWait(armSetpoint));
+    }
+
+    private Command joystickDrive()
+    {
+        return DriveCommands.joystickDrive(
+            drive,
+            () -> -controller.getLeftY(),
+            () -> -controller.getLeftX(),
+            () -> -controller.getRightX());
+    }
+
+    // private JoystickApproachCommand joystickApproach(Supplier<Pose2d> approachPose)
+    // {
+    // return new JoystickApproachCommand(
+    // m_drive,
+    // () -> m_driver.getLeftY(),
+    // approachPose);
+    // }
 }

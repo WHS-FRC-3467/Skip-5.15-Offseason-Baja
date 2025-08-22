@@ -4,13 +4,20 @@
 
 package frc.robot.subsystems.tounge;
 
+import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Rotation;
+import static edu.wpi.first.units.Units.Volts;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.units.BaseUnits;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.io.motor.MotorIO.PIDSlot;
 import frc.lib.mechanisms.rotary.RotaryMechanism;
 import frc.lib.util.LoggedTunableNumber;
@@ -20,25 +27,35 @@ import lombok.RequiredArgsConstructor;
 public class Tounge extends SubsystemBase {
 
     private final RotaryMechanism io;
-
-    private static final LoggedTunableNumber STOW_SETPOINT = new LoggedTunableNumber("TEST", 0.0);
-    private static final LoggedTunableNumber RASIED_SETPOINT =
-        new LoggedTunableNumber("RAISED", 90);
+    public final Trigger homedTrigger;
+    public final Trigger coralContactTrigger;
+    public final Trigger hasLoweredTrigger;
+    private final Debouncer homedDebouncer = new Debouncer(0.1, DebounceType.kRising);
 
     @RequiredArgsConstructor
     @Getter
     public enum Setpoint {
-        STOW(Degrees.of(STOW_SETPOINT.get())),
-        RAISED(Degrees.of(RASIED_SETPOINT.get()));
+        HOMING(Volts.of(-1)),
+        STOW(Volts.of(0)),
+        RAISED(Volts.of(1)),
+        L1(Volts.of(12)),
+        DOWN(Volts.of(-12));
 
-        private final Angle setpoint;
+        private final Voltage setpoint;
     }
-
 
     public Tounge(RotaryMechanism io)
     {
         this.io = io;
+        homedTrigger = new Trigger(
+            () -> homedDebouncer.calculate(
+                io.getSupplyCurrent().gt(Amps.of(2))));
 
+        coralContactTrigger = new Trigger(
+            () -> nearPosition(Rotation.of(.29)));
+
+        hasLoweredTrigger = new Trigger(
+            () -> nearPosition(Rotation.of(0)));
     }
 
     @Override
@@ -50,9 +67,7 @@ public class Tounge extends SubsystemBase {
     public Command setSetpoint(Setpoint setpoint)
     {
         return this.runOnce(
-            () -> io.runPosition(setpoint.getSetpoint(), ToungeConstants.CRUISE_VELOCITY,
-                ToungeConstants.ACCELERATION, ToungeConstants.JERK,
-                PIDSlot.SLOT_1));
+            () -> io.runVoltage(setpoint.getSetpoint()));
     };
 
     public boolean nearPosition(Angle targetPosition)
@@ -63,18 +78,22 @@ public class Tounge extends SubsystemBase {
             ToungeConstants.TOLERANCE.in(BaseUnits.AngleUnit));
     }
 
-    public Command waitForPositionCommand(Angle position)
+    public Command lowerToungeCommand()
     {
-        return Commands.waitUntil(() -> {
-            return nearPosition(position);
-        });
+        return Commands.sequence(
+            setSetpoint(Setpoint.DOWN),
+            Commands.race(
+                Commands.waitUntil(this.hasLoweredTrigger),
+                Commands.waitSeconds(0.5)),
+            setSetpoint(Setpoint.STOW));
     }
 
-    public Command setpointCommandWithWait(Setpoint setpoint)
+    public Command homeCommand()
     {
-        return waitForPositionCommand(setpoint.getSetpoint())
-            .deadlineFor(setSetpoint(setpoint));
+        return Commands.sequence(
+            setSetpoint(Setpoint.HOMING),
+            Commands.waitUntil(homedTrigger),
+            Commands.runOnce(() -> io.setEncoderPosition(Rotation.of(0))),
+            setSetpoint(Setpoint.STOW));
     }
-
-
 }
