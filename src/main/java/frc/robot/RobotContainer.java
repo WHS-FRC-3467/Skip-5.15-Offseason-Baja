@@ -197,6 +197,8 @@ public class RobotContainer {
             }
         }
 
+        isCoralMode = new Trigger(clawLaserCAN.triggered.debounce(0.25));
+
         // Set up auto routines
         autoChooser = new LoggedDashboardChooser<>("Auto Choices");
         SmartDashboard.putData("Auto Preview", autoPreviewField);
@@ -249,17 +251,17 @@ public class RobotContainer {
             .and(isCoralMode.negate())
             .whileTrue(DescoreAlgae());
 
-        // Score L1 left
-        controller
-            .leftBumper()
-            .and(controller.a())
-            .whileTrue(null);
+        // // Score L1 left
+        // controller
+        // .leftBumper()
+        // .and(controller.a())
+        // .whileTrue(null);
 
-        // Score L1 right
-        controller
-            .rightBumper()
-            .and(controller.a())
-            .whileTrue(null);
+        // // Score L1 right
+        // controller
+        // .rightBumper()
+        // .and(controller.a())
+        // .whileTrue(null);
 
         // Prep for L1 Score, or ground algae intake
         controller
@@ -415,10 +417,10 @@ public class RobotContainer {
                 // controller.rumbleForTime(0.25, 1)
                 ));
 
-        // Climb Sequence
-        controller
-            .back()
-            .onTrue(null);
+        // // Climb Sequence
+        // controller
+        // .back()
+        // .onTrue(null);
 
         // Elevator Stow Override
         controller
@@ -433,10 +435,10 @@ public class RobotContainer {
                     clawroller.stop(),
                     tounge.setSetpoint(Tounge.Setpoint.STOW)));
 
-        // Climber Sequence Reset
-        controller
-            .povRight()
-            .onTrue(null);
+        // // Climber Sequence Reset
+        // controller
+        // .povRight()
+        // .onTrue(null);
 
         // Unjam
         controller
