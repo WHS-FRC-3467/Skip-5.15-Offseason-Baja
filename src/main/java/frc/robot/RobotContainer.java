@@ -18,6 +18,8 @@ package frc.robot;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -33,7 +35,10 @@ import frc.lib.util.LoggedDashboardChooser;
 import frc.lib.util.AutoCommand;
 import frc.lib.util.CommandXboxControllerExtended;
 import frc.robot.Constants.PathConstants;
+import frc.robot.FieldConstants.ReefSide;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.JoystickApproachCommand;
+import frc.robot.commands.JoystickStrafeCommand;
 import frc.robot.commands.OnTheFlyPathCommand;
 import frc.robot.commands.autos.BranchingAuto;
 import frc.robot.commands.autos.ExampleAuto;
@@ -64,6 +69,7 @@ import frc.robot.subsystems.tounge.Tounge.Setpoint;
 import frc.robot.subsystems.tounge.ToungeConstants;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionConstants;
+import static edu.wpi.first.units.Units.Inches;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.Supplier;
@@ -224,20 +230,24 @@ public class RobotContainer {
         controller
             .rightBumper()
             .and(isCoralMode)
-            .whileTrue(null);
+            .whileTrue(joystickApproach(
+                () -> FieldConstants.getNearestReefBranch(
+                    drive.getPose(), ReefSide.RIGHT)));
 
         // Align left
         controller
             .leftBumper()
             .and(isCoralMode)
-            .whileTrue(null);
+            .whileTrue(joystickApproach(
+                () -> FieldConstants.getNearestReefBranch(
+                    drive.getPose(), ReefSide.LEFT)));
 
         // Descore Algae
         controller
             .leftBumper()
             .and(controller.rightBumper())
             .and(isCoralMode.negate())
-            .whileTrue(null);
+            .whileTrue(DescoreAlgae());
 
         // Score L1 left
         controller
@@ -254,13 +264,34 @@ public class RobotContainer {
         // Prep for L1 Score, or ground algae intake
         controller
             .a()
-            .onTrue(null)
-            .whileTrue(null);
+            .onTrue(
+                Commands.either(
+                    // Driver A Button: Send Arm and Elevator to LEVEL_1
+                    superStructureCommand(Arm.Setpoint.LEVEL_1, Elevator.Setpoint.LEVEL_1),
+                    // Driver A Button and Algae mode: Send Arm and Elevator to Ground Intake
+                    Commands.sequence(
+                        superStructureCommand(Arm.Setpoint.ALGAE_GROUND,
+                            Elevator.Setpoint.CORAL_INTAKE),
+                        clawroller.algaeReverse(),
+                        Commands.waitUntil(clawroller.stalled),
+                        superStructureCommand(Arm.Setpoint.STOW, Elevator.Setpoint.STOW)),
+                    isCoralMode))
+            .whileTrue(
+                Commands.either(
+                    DriveCommands.joystickDriveAtAngle(
+                        drive,
+                        () -> -controller.getLeftY(),
+                        () -> -controller.getLeftX(),
+                        () -> FieldConstants
+                            .getNearestReefFace(drive.getPose())
+                            .getRotation().plus(Rotation2d.k180deg)),
+                    Commands.none(),
+                    isCoralMode));
 
         // Algae Descore to Lower Claw - Processor
         controller
             .start()
-            .whileTrue(null);
+            .whileTrue(descoreAlgaeProcessor());
 
         // L2 Coral
         controller
@@ -285,7 +316,11 @@ public class RobotContainer {
                     superStructureCommand(
                         Arm.Setpoint.STOW,
                         Elevator.Setpoint.STOW)))
-            .whileTrue(null); // Face driverstation
+            .whileTrue(DriveCommands.joystickDriveAtAngle(
+                drive,
+                () -> -controller.getLeftY() * 0.75,
+                () -> -controller.getLeftX() * 0.75,
+                () -> rotateForAlliance(Rotation2d.k180deg))); // Face driverstation
 
         // L3 Coral
         controller
@@ -304,7 +339,12 @@ public class RobotContainer {
                 superStructureCommand(
                     Arm.Setpoint.PROCESSOR_SCORE,
                     Elevator.Setpoint.STOW))
-            .whileTrue(null); // Align to processor
+            .whileTrue(
+                DriveCommands.joystickDriveAtAngle(
+                    drive,
+                    () -> -controller.getLeftY() * 0.75,
+                    () -> -controller.getLeftX() * 0.75,
+                    () -> rotateForAlliance(Rotation2d.kCW_90deg))); // Align to processor
 
         // L4 Coral
         controller
@@ -319,7 +359,7 @@ public class RobotContainer {
         controller
             .y()
             .and(isCoralMode.negate())
-            .onTrue(null);
+            .onTrue(BargeAlgae());
 
         // Score Coral or Algae
         controller
@@ -336,15 +376,44 @@ public class RobotContainer {
                             Arm.Setpoint.STOW,
                             Elevator.Setpoint.STOW)),
 
-                    Commands.sequence(null),
+                    Commands.either(
+                        clawroller.algaeForward(),
+                        clawroller.algaeReverse(),
+                        // TODO: Fix
+                        () -> true),
+                    // () -> clawroller.getSetpoint() == ClawRoller.Setpoint.ALGAE_REVERSE),
 
                     isCoralMode));
 
         // Coral Intake
         controller
             .leftTrigger()
-            .whileTrue(null)
-            .onFalse(null);
+            .whileTrue(
+                Commands.sequence(
+                    tounge.setSetpoint(Tounge.Setpoint.RAISED),
+                    superStructureCommand(Arm.Setpoint.CORAL_INTAKE,
+                        Elevator.Setpoint.CORAL_INTAKE),
+                    Commands.repeatingSequence(
+                        clawroller.intake(),
+                        Commands.waitUntil(clawroller.stalled.debounce(0.1)),
+                        clawroller.shuffleCommand())
+                        .until(clawLaserCAN.triggered
+                            .and(clawroller.stopped.debounce(0.15))),
+
+                    Commands.waitUntil(
+                        clawLaserCAN.triggered
+                            .and(tounge.coralContactTrigger)
+                            .and(clawroller.stopped)),
+                    clawroller.shuffleCommand(),
+                    clawroller.setSetpoint(ClawRoller.Setpoint.HOLDCORAL)))
+            .onFalse(
+                Commands.sequence(
+                    clawroller.stop(),
+                    superStructureCommand(Arm.Setpoint.STOW, Elevator.Setpoint.STOW),
+                    tounge.lowerToungeCommand()
+                // ,
+                // controller.rumbleForTime(0.25, 1)
+                ));
 
         // Climb Sequence
         controller
@@ -416,11 +485,92 @@ public class RobotContainer {
             () -> -controller.getRightX());
     }
 
-    // private JoystickApproachCommand joystickApproach(Supplier<Pose2d> approachPose)
-    // {
-    // return new JoystickApproachCommand(
-    // m_drive,
-    // () -> m_driver.getLeftY(),
-    // approachPose);
-    // }
+    private Command joystickApproach(Supplier<Pose2d> approachPose)
+    {
+        return new JoystickApproachCommand(
+            drive,
+            () -> -controller.getLeftY(),
+            approachPose);
+    }
+
+    private Command DescoreAlgae()
+    {
+        var approachCommand = new JoystickApproachCommand(
+            drive,
+            () -> controller.getLeftY(),
+            () -> FieldConstants.getNearestReefFace(drive.getPose()));
+
+        return Commands.deadline(
+            Commands.sequence(
+                clawroller.algaeForward(),
+                Commands.either(
+                    superStructureCommand(Arm.Setpoint.ALGAE_HIGH, Elevator.Setpoint.ALGAE_HIGH),
+                    superStructureCommand(Arm.Setpoint.ALGAE_LOW, Elevator.Setpoint.ALGAE_LOW),
+                    () -> FieldConstants.isAlgaeHigh(drive.getPose())),
+                Commands.waitUntil(clawroller.stalled),
+                superStructureCommand(Arm.Setpoint.STOW,
+                    Elevator.Setpoint.ALGAE_STOW)),
+            approachCommand);
+    }
+
+    private Command descoreAlgaeProcessor()
+    {
+        var approachCommand = new JoystickApproachCommand(
+            drive,
+            () -> controller.getLeftY(),
+            () -> FieldConstants.getNearestReefFace(drive.getPose()));
+
+        return Commands.deadline(
+            Commands.sequence(
+                clawroller.algaeReverse(),
+                Commands.either(
+                    superStructureCommand(Arm.Setpoint.ALGAE_HIGH_P,
+                        Elevator.Setpoint.ALGAE_HIGH_P),
+                    superStructureCommand(Arm.Setpoint.ALGAE_LOW_P,
+                        Elevator.Setpoint.ALGAE_LOW_P),
+                    () -> FieldConstants.isAlgaeHigh(drive.getPose())),
+                Commands.waitUntil(clawroller.stalled),
+                superStructureCommand(Arm.Setpoint.STOW,
+                    Elevator.Setpoint.ALGAE_STOW)),
+            approachCommand);
+    }
+
+    private Command BargeAlgae()
+    {
+        var strafeCommand = new JoystickStrafeCommand(
+            drive,
+            () -> -controller.getLeftX(),
+            () -> drive.getPose().nearest(FieldConstants.Barge.bargeLine));
+
+        return Commands.deadline(
+            Commands.sequence(
+                Commands.waitUntil(
+                    () -> strafeCommand.withinTolerance(
+                        Inches.of(2.0))),
+                arm.setpointCommandWithWait(Arm.Setpoint.STOW),
+                elevator.setSetpoint(Elevator.Setpoint.BARGE),
+                Commands.waitUntil(elevator.launchHeightTrigger),
+                clawroller.algaeReverse(),
+                Commands.waitUntil(clawroller.stopped.negate()),
+                Commands.waitSeconds(0.2),
+                clawroller.stop()),
+            strafeCommand)
+            .finallyDo(interrupted -> {
+                if (!interrupted)
+                    superStructureCommand(Arm.Setpoint.STOW, Elevator.Setpoint.STOW).schedule();
+            });
+    }
+
+    public Rotation2d rotateForAlliance(Rotation2d target)
+    {
+        if (DriverStation.getAlliance().isPresent()) {
+            if (DriverStation.getAlliance().get() == Alliance.Red) {
+                return target.rotateBy(Rotation2d.k180deg);
+            } else {
+                return target;
+            }
+        } else {
+            return target;
+        }
+    }
 }

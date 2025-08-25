@@ -85,7 +85,7 @@ public class ClawRoller extends SubsystemBase { // Don't extend if contained in 
         return runOnce(() -> io.runCurrent(Amps.of(-90)));
     }
 
-    public Command runSetpoint(Setpoint setpoint)
+    public Command setSetpoint(Setpoint setpoint)
     { // TODO: is "this" needed?
         return this
             .runOnce(
@@ -102,21 +102,21 @@ public class ClawRoller extends SubsystemBase { // Don't extend if contained in 
     {
         return Commands.sequence(
             zeroSensors(),
-            runSetpoint(Setpoint.SHUFFLE));
+            setSetpoint(Setpoint.SHUFFLE));
     }
 
     public Command L4ShuffleCommand()
     {
         return Commands.sequence(
             zeroSensors(),
-            runSetpoint(Setpoint.L4_RETRACT));
+            setSetpoint(Setpoint.L4_RETRACT));
     }
 
     public Command L1ShuffleCommand()
     {
         return Commands.sequence(
             zeroSensors(),
-            runSetpoint(Setpoint.L1_SHUFFLE));
+            setSetpoint(Setpoint.L1_SHUFFLE));
     }
 
 }
