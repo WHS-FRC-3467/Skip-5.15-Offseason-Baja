@@ -11,6 +11,7 @@ import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
+import java.util.Optional;
 import org.littletonrobotics.junction.Logger;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.AngularAccelerationUnit;
@@ -27,25 +28,31 @@ import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 import frc.lib.io.motor.MotorIO.PIDSlot;
+import frc.lib.io.absoluteencoder.AbsoluteEncoderIOSim;
+import frc.lib.io.absoluteencoder.AbsoluteEncoderInputsAutoLogged;
 import frc.lib.io.motor.MotorIOSim;
-import frc.lib.io.motor.MotorInputsAutoLogged;
 
 /**
  * A simulated implementation of the RotaryMechanism interface that uses SingleJointedArmSim to
  * simulate the behavior of a rotary mechanism.
  */
-public class RotaryMechanismSim implements RotaryMechanism {
+public class RotaryMechanismSim extends RotaryMechanism {
 
     private final MotorIOSim io;
-    private final MotorInputsAutoLogged inputs = new MotorInputsAutoLogged();
     private final SingleJointedArmSim sim;
-    private final RotaryVisualizer visualizer;
+
+    private final AbsoluteEncoderInputsAutoLogged absoluteEncoderInputs =
+        new AbsoluteEncoderInputsAutoLogged();
+    private final Optional<AbsoluteEncoderIOSim> absoluteEncoderSim;
     private Time lastTime = Seconds.zero();
 
     public RotaryMechanismSim(MotorIOSim io, DCMotor dcMotor,
         MomentOfInertia momentOfInertia, Boolean useGravity,
-        RotaryMechCharacteristics characteristics)
+        RotaryMechCharacteristics characteristics,
+        Optional<AbsoluteEncoderIOSim> absoluteEncoderSim)
     {
+        super(io.getName(), characteristics);
+
         if (momentOfInertia.isEquivalent(KilogramSquareMeters.zero()))
             throw new IllegalArgumentException(
                 "momentOfInertia must be greater than zero!");
@@ -53,7 +60,7 @@ public class RotaryMechanismSim implements RotaryMechanism {
         this.io = io;
         sim = new SingleJointedArmSim(
             dcMotor,
-            io.getGearRatio(),
+            io.getRotorToSensorRatio() * io.getSensorToMechanismRatio(),
             momentOfInertia.in(KilogramSquareMeters),
             characteristics.armLength().in(Meters),
             characteristics.minAngle().in(Radians),
@@ -61,12 +68,14 @@ public class RotaryMechanismSim implements RotaryMechanism {
             useGravity,
             characteristics.startingAngle().in(Radians));
 
-        visualizer = new RotaryVisualizer(io.getName(), characteristics);
+        this.absoluteEncoderSim = absoluteEncoderSim;
     }
 
     @Override
     public void periodic()
     {
+        super.periodic();
+
         Time currentTime = Seconds.of(Timer.getTimestamp());
         double deltaTime = currentTime.minus(lastTime).in(Seconds);
 
@@ -78,14 +87,24 @@ public class RotaryMechanismSim implements RotaryMechanism {
         lastTime = currentTime;
 
         io.setPosition(Radians.of(sim.getAngleRads()));
-        io.setRotorVelocity(
-            RadiansPerSecond.of(sim.getVelocityRadPerSec()));
+        io.setRotorVelocity(RadiansPerSecond.of(sim.getVelocityRadPerSec())
+            .times(io.getRotorToSensorRatio() * io.getSensorToMechanismRatio()));
+
+        Logger.recordOutput(io.getName() + " Sim Angle", sim.getAngleRads());
+
+        absoluteEncoderSim.ifPresent(encoderSim -> {
+            encoderSim
+                .setAngle(Radians.of(sim.getAngleRads()).times(io.getSensorToMechanismRatio()));
+            encoderSim
+                .setAngularVelocity(RadiansPerSecond.of(sim.getVelocityRadPerSec())
+                    .times(io.getSensorToMechanismRatio()));
+
+            encoderSim.updateInputs(absoluteEncoderInputs);
+            Logger.processInputs(encoderSim.getName(), absoluteEncoderInputs);
+        });
 
         io.updateInputs(inputs);
         Logger.processInputs(io.getName(), inputs);
-
-        visualizer.setCurrentAngle(Radians.of(sim.getAngleRads()));
-        visualizer.setTrajectoryAngle(inputs.activeTrajectoryPosition);
     }
 
     @Override
@@ -124,7 +143,6 @@ public class RotaryMechanismSim implements RotaryMechanism {
         Velocity<AngularAccelerationUnit> maxJerk, PIDSlot slot)
     {
         io.runPosition(position, cruiseVelocity, acceleration, maxJerk, slot);
-        visualizer.setGoalAngle(position);
     }
 
     @Override

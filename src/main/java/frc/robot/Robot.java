@@ -21,15 +21,12 @@ import com.ctre.phoenix6.swerve.SwerveModuleConstants.SteerMotorArrangement;
 import au.grapplerobotics.CanBridge;
 import com.pathplanner.lib.commands.PathfindingCommand;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.subsystems.drive.DriveConstants;
-
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
-import org.littletonrobotics.junction.inputs.LoggedPowerDistribution;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
 import org.littletonrobotics.junction.wpilog.WPILOGReader;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
@@ -66,7 +63,6 @@ public class Robot extends LoggedRobot {
                 // Running on a real robot, log to a USB stick ("/U/logs")
                 Logger.addDataReceiver(new WPILOGWriter());
                 Logger.addDataReceiver(new NT4Publisher());
-                LoggedPowerDistribution.getInstance(Ports.PDH.id(), ModuleType.kRev);
             }
 
             case SIM -> {
@@ -119,10 +115,19 @@ public class Robot extends LoggedRobot {
          * significantly higher delay compared with subsequent runs. To help alleviate this issue,
          * run this warmup command in the background when code starts. This command will not control
          * the robot, it will simply run through a full pathfinding command to warm up the library.
-         * Source: PathPlanner Docs
+         * public void robotInit() { /* Due to the nature of how Java works, the first run of a
+         * pathfinding command could have a significantly higher delay compared with subsequent
+         * runs. To help alleviate this issue, run this warmup command in the background when code
+         * starts. This command will not control the robot, it will simply run through a full
+         * pathfinding command to warm up the library. Source: PathPlanner Docs
          */
         // DO THIS AFTER CONFIGURATION OF YOUR DESIRED PATHFINDER
         PathfindingCommand.warmupCommand().schedule();
+
+        // Log first 8 character of robot serial
+        Logger.recordOutput("Robot Serial",
+            Robot.isReal() ? Constants.RobotConstants.serial.subSequence(0, 8).toString()
+                : Constants.RobotConstants.serial);
     }
 
     /** This function is called periodically during all modes. */
@@ -142,16 +147,13 @@ public class Robot extends LoggedRobot {
 
         // Return to non-RT thread priority (do not modify the first argument)
         // Threads.setCurrentThreadPriority(false, 10);
+
+        RobotState.getInstance().publishMechanismPoses();
     }
 
     /** This function is called once when the robot is disabled. */
     @Override
     public void disabledInit()
-    {}
-
-    /** This function is called periodically when disabled. */
-    @Override
-    public void disabledPeriodic()
     {}
 
     /**
@@ -171,7 +173,9 @@ public class Robot extends LoggedRobot {
     /** This function is called periodically during autonomous. */
     @Override
     public void autonomousPeriodic()
-    {}
+    {
+        RobotContainer.autoPreviewField.setRobotPose(robotContainer.drive.getPose());
+    }
 
     /** This function is called once when teleop is enabled. */
     @Override

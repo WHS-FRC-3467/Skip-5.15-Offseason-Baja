@@ -50,9 +50,11 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.lib.util.LoggerHelper;
 import frc.lib.util.Timestamped;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
+import frc.robot.RobotState;
 import frc.robot.util.LocalADStarAK;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -133,26 +135,28 @@ public class Drive extends SubsystemBase {
         PhoenixOdometryThread.getInstance().start();
 
         // Configure AutoBuilder for PathPlanner
-        AutoBuilder.configure(
-            this::getPose,
-            this::setPose,
-            this::getChassisSpeeds,
-            this::runVelocity,
-            new PPHolonomicDriveController(
-                new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
-            PP_CONFIG,
-            () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
-            this);
-        Pathfinding.setPathfinder(new LocalADStarAK());
-        PathPlannerLogging.setLogActivePathCallback(
-            (activePath) -> {
-                Logger.recordOutput(
-                    "Odometry/Trajectory", activePath.toArray(new Pose2d[activePath.size()]));
-            });
-        PathPlannerLogging.setLogTargetPoseCallback(
-            (targetPose) -> {
-                Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
-            });
+        if (!AutoBuilder.isConfigured()) {
+            AutoBuilder.configure(
+                this::getPose,
+                this::setPose,
+                this::getChassisSpeeds,
+                this::runVelocity,
+                new PPHolonomicDriveController(
+                    new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
+                PP_CONFIG,
+                () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+                this);
+            Pathfinding.setPathfinder(new LocalADStarAK());
+            PathPlannerLogging.setLogActivePathCallback(
+                (activePath) -> {
+                    Logger.recordOutput(
+                        "Odometry/Trajectory", activePath.toArray(new Pose2d[activePath.size()]));
+                });
+            PathPlannerLogging.setLogTargetPoseCallback(
+                (targetPose) -> {
+                    Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
+                });
+        }
 
         // Configure SysId
         sysId = new SysIdRoutine(
@@ -169,6 +173,7 @@ public class Drive extends SubsystemBase {
     @SuppressWarnings("LockNotBeforeTry")
     public void periodic()
     {
+        LoggerHelper.recordCurrentCommand("Drive", this);
         odometryLock.lock(); // Prevents odometry updates while reading data
         gyroIO.updateInputs(gyroInputs);
         Logger.processInputs("Drive/Gyro", gyroInputs);
@@ -223,6 +228,15 @@ public class Drive extends SubsystemBase {
 
         // Update gyro alert
         gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
+
+        // Update global pose
+        RobotState.getInstance().setPose(poseEstimator.getEstimatedPosition());
+
+        // Update RobotState velocity
+        RobotState.getInstance().setVelocity(getChassisSpeeds());
+
+        Logger.recordOutput("Drive/Speed", new Translation2d(getChassisSpeeds().vxMetersPerSecond,
+            getChassisSpeeds().vyMetersPerSecond).getNorm() * -1);
     }
 
     /**
@@ -283,14 +297,16 @@ public class Drive extends SubsystemBase {
     {
         return run(() -> runCharacterization(0.0))
             .withTimeout(1.0)
-            .andThen(sysId.quasistatic(direction));
+            .andThen(sysId.quasistatic(direction))
+            .withName("SysId Quasistatic " + direction.toString());
     }
 
     /** Returns a command to run a dynamic test in the specified direction. */
     public Command sysIdDynamic(SysIdRoutine.Direction direction)
     {
         return run(() -> runCharacterization(0.0)).withTimeout(1.0)
-            .andThen(sysId.dynamic(direction));
+            .andThen(sysId.dynamic(direction))
+            .withName("SysId Dynamic " + direction.toString());
     }
 
     /**
@@ -320,7 +336,7 @@ public class Drive extends SubsystemBase {
 
     /** Returns the measured chassis speeds of the robot. */
     @AutoLogOutput(key = "SwerveChassisSpeeds/Measured")
-    protected ChassisSpeeds getChassisSpeeds()
+    public ChassisSpeeds getChassisSpeeds()
     {
         return kinematics.toChassisSpeeds(getModuleStates());
     }

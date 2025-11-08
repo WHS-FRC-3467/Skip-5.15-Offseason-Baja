@@ -15,7 +15,6 @@
 
 package frc.lib.io.vision;
 
-import static frc.robot.subsystems.vision.VisionConstants.aprilTagLayout;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -29,10 +28,10 @@ import org.photonvision.simulation.VisionSystemSim;
 
 /** IO implementation for physics sim using PhotonVision simulator. */
 public class VisionIOPhotonVisionSim extends VisionIOPhotonVision {
-    private static VisionSystemSim visionSim = null;
-
     private final Supplier<Pose2d> poseSupplier;
     private final PhotonCameraSim cameraSim;
+
+    private final VisionSystemSim system;
 
     /**
      * Creates a new VisionIOPhotonVisionSim.
@@ -42,27 +41,23 @@ public class VisionIOPhotonVisionSim extends VisionIOPhotonVision {
      */
     public VisionIOPhotonVisionSim(Supplier<Pose2d> poseSupplier, String name,
         Transform3d robotToCamera,
-        AprilTagFieldLayout fieldLayout, PoseStrategy strategy)
+        AprilTagFieldLayout fieldLayout, PoseStrategy strategy, VisionSystemSim system)
     {
         super(name, robotToCamera, fieldLayout, strategy);
         this.poseSupplier = poseSupplier;
 
-        if (visionSim == null) {
-            // Initialize vision sim
-            visionSim = new VisionSystemSim("main");
-            visionSim.addAprilTags(aprilTagLayout);
-        }
+        this.system = system;
 
         // Add sim camera
         var cameraProperties = new SimCameraProperties();
-        cameraSim = new PhotonCameraSim(camera, cameraProperties, aprilTagLayout);
-        visionSim.addCamera(cameraSim, robotToCamera);
+        cameraSim = new PhotonCameraSim(camera, cameraProperties, fieldLayout);
+        this.system.addCamera(cameraSim, robotToCamera);
     }
 
     @Override
     public void updateInputs(VisionIOInputs inputs, Timestamped<Rotation2d> timestampedHeading)
     {
-        visionSim.update(poseSupplier.get());
+        system.update(poseSupplier.get());
         super.updateInputs(inputs, timestampedHeading);
     }
 }

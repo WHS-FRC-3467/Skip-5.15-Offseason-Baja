@@ -19,12 +19,19 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import org.littletonrobotics.junction.Logger;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+import org.photonvision.simulation.VisionSystemSim;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Filesystem;
+import frc.lib.io.vision.VisionIO;
+import frc.lib.io.vision.VisionIOPhotonVision;
+import frc.lib.io.vision.VisionIOPhotonVisionSim;
+import frc.robot.Constants;
+import frc.robot.subsystems.drive.Drive;
 
 public class VisionConstants {
     // AprilTag layout
@@ -35,10 +42,10 @@ public class VisionConstants {
             aprilTagLayout =
                 new AprilTagFieldLayout(Path
                     .of(Filesystem.getDeployDirectory().getAbsolutePath()
-                        + "/vision/welded.json"));
+                        + "/vision/andymark.json"));
             usedCustomField = true;
         } catch (Exception e) {
-            aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+            aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeAndyMark);
         }
         Logger.recordOutput("Used Custom Field?", usedCustomField);
     }
@@ -48,6 +55,7 @@ public class VisionConstants {
     public static String camera1Name = "front_right";
 
     // Robot to camera transforms
+    // (Not used by Limelight, configure in web UI instead)
     public static Transform3d robotToCamera0 =
         new Transform3d(Units.inchesToMeters(9.287), Units.inchesToMeters(10.9704),
             Units.inchesToMeters(7.9167),
@@ -56,6 +64,7 @@ public class VisionConstants {
         new Transform3d(Units.inchesToMeters(9.287), Units.inchesToMeters(-10.9704),
             Units.inchesToMeters(7.9167),
             new Rotation3d(0.0, Units.degreesToRadians(-15), Units.degreesToRadians(30)));
+
     // Basic filtering thresholds
     public static double maxAmbiguity = 0.3;
     public static double maxZError = 0.75;
@@ -72,5 +81,49 @@ public class VisionConstants {
             1.0 // Camera 1
     };
 
-    public static List<Integer> rejectedTags = Arrays.asList(2, 3, 4, 5, 14, 15, 16);
+    /**
+     * Tags used for reef alignment
+     */
+    public static List<Integer> alignmentTags =
+        Arrays.asList(6, 7, 8, 9, 10, 11, 17, 18, 19, 20, 21, 22);
+
+    public static VisionSystemSim getSystemSim()
+    {
+        var system = new VisionSystemSim("main");
+        system.addAprilTags(aprilTagLayout);
+        return system;
+    }
+
+    public static Vision get(Drive drive)
+    {
+        switch (Constants.currentMode) {
+            case REAL:
+                return new Vision(
+                    drive::addVisionMeasurement,
+                    () -> drive.getTimestampedHeading(),
+                    new VisionIOPhotonVision(
+                        VisionConstants.camera0Name,
+                        VisionConstants.robotToCamera0,
+                        VisionConstants.aprilTagLayout,
+                        PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR));
+            case SIM:
+                return new Vision(
+                    drive::addVisionMeasurement,
+                    () -> drive.getTimestampedHeading(),
+                    new VisionIOPhotonVisionSim(
+                        () -> drive.getPose(),
+                        VisionConstants.camera0Name,
+                        VisionConstants.robotToCamera0,
+                        VisionConstants.aprilTagLayout,
+                        PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
+                        getSystemSim()));
+            case REPLAY:
+                return new Vision(
+                    drive::addVisionMeasurement,
+                    () -> drive.getTimestampedHeading(),
+                    new VisionIO() {});
+            default:
+                throw new IllegalStateException("Unrecognized Robot Mode");
+        }
+    }
 }

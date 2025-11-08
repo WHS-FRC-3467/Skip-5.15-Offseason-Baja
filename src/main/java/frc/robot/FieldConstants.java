@@ -20,10 +20,10 @@ import java.util.Map;
  * have a blue alliance origin.
  */
 public class FieldConstants {
-    public static final double FIELDLENGTH = Units.inchesToMeters(690.876);
-    public static final double FIELDWIDTH = Units.inchesToMeters(317);
-    public static final Translation2d FIELDCENTER =
-        new Translation2d(FIELDLENGTH / 2, FIELDWIDTH / 2);
+    public static final double fieldLength = Units.inchesToMeters(690.876);
+    public static final double fieldWidth = Units.inchesToMeters(317);
+    public static final Translation2d fieldCenter =
+        new Translation2d(fieldLength / 2, fieldWidth / 2);
     public static final double startingLineX =
         Units.inchesToMeters(299.438); // Measured from the inside of starting
     // line
@@ -35,9 +35,9 @@ public class FieldConstants {
 
     public static class Barge {
         public static final List<Pose2d> bargeLine = Arrays.asList(
-            new Pose2d(FIELDLENGTH / 2 + Units.inchesToMeters(52), FIELDWIDTH / 2,
+            new Pose2d(fieldLength / 2 + Units.inchesToMeters(52), fieldWidth / 2,
                 Rotation2d.kZero),
-            new Pose2d(FIELDLENGTH / 2 - Units.inchesToMeters(52), FIELDWIDTH / 2,
+            new Pose2d(fieldLength / 2 - Units.inchesToMeters(52), fieldWidth / 2,
                 Rotation2d.k180deg));
         public static final Translation2d farCage =
             new Translation2d(Units.inchesToMeters(345.428), Units.inchesToMeters(286.779));
@@ -115,12 +115,12 @@ public class FieldConstants {
                     Units.inchesToMeters(130.144),
                     Rotation2d.fromDegrees(-120));
 
-            centerFaces[6] = centerFaces[0].rotateAround(FIELDCENTER, Rotation2d.k180deg);
-            centerFaces[7] = centerFaces[1].rotateAround(FIELDCENTER, Rotation2d.k180deg);
-            centerFaces[8] = centerFaces[2].rotateAround(FIELDCENTER, Rotation2d.k180deg);
-            centerFaces[9] = centerFaces[3].rotateAround(FIELDCENTER, Rotation2d.k180deg);
-            centerFaces[10] = centerFaces[4].rotateAround(FIELDCENTER, Rotation2d.k180deg);
-            centerFaces[11] = centerFaces[5].rotateAround(FIELDCENTER, Rotation2d.k180deg);
+            centerFaces[6] = centerFaces[0].rotateAround(fieldCenter, Rotation2d.k180deg);
+            centerFaces[7] = centerFaces[1].rotateAround(fieldCenter, Rotation2d.k180deg);
+            centerFaces[8] = centerFaces[2].rotateAround(fieldCenter, Rotation2d.k180deg);
+            centerFaces[9] = centerFaces[3].rotateAround(fieldCenter, Rotation2d.k180deg);
+            centerFaces[10] = centerFaces[4].rotateAround(fieldCenter, Rotation2d.k180deg);
+            centerFaces[11] = centerFaces[5].rotateAround(fieldCenter, Rotation2d.k180deg);
 
             // Initialize branch positions
             for (int face = 0; face < centerFaces.length; face++) {
@@ -133,7 +133,7 @@ public class FieldConstants {
                             new Pose2d(centerOfReef, centerFaces[face].getRotation());
                     } else {
                         poseDirection =
-                            new Pose2d(centerOfReef.rotateAround(FIELDCENTER, Rotation2d.k180deg),
+                            new Pose2d(centerOfReef.rotateAround(fieldCenter, Rotation2d.k180deg),
                                 centerFaces[face].getRotation());
                     }
 
@@ -236,16 +236,16 @@ public class FieldConstants {
 
     public static Pose2d getNearestCoralStation(Pose2d currentPose)
     {
-        if (currentPose.getTranslation().getX() > FieldConstants.FIELDLENGTH / 2) {
-            if (currentPose.getTranslation().getY() > FieldConstants.FIELDWIDTH / 2) {
+        if (currentPose.getTranslation().getX() > FieldConstants.fieldLength / 2) {
+            if (currentPose.getTranslation().getY() > FieldConstants.fieldWidth / 2) {
                 return FieldConstants.CoralStation.rightCenterFace
-                    .rotateAround(FieldConstants.FIELDCENTER, Rotation2d.k180deg);
+                    .rotateAround(FieldConstants.fieldCenter, Rotation2d.k180deg);
             } else {
                 return FieldConstants.CoralStation.leftCenterFace
-                    .rotateAround(FieldConstants.FIELDCENTER, Rotation2d.k180deg);
+                    .rotateAround(FieldConstants.fieldCenter, Rotation2d.k180deg);
             }
         } else {
-            if (currentPose.getTranslation().getY() > FieldConstants.FIELDWIDTH / 2) {
+            if (currentPose.getTranslation().getY() > FieldConstants.fieldWidth / 2) {
                 return FieldConstants.CoralStation.leftCenterFace;
             } else {
                 return FieldConstants.CoralStation.rightCenterFace;

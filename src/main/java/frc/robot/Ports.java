@@ -22,7 +22,6 @@ public class Ports {
      * LIST OF CHANNEL AND CAN IDS
      */
 
-    public static final Device.CAN MITOCANDRIA = new Device.CAN(15, "rio");
     public static final Device.CAN CLAW_LASERCAN = new Device.CAN(16, "rio");
     public static final Device.CAN CLAW_ROLLER = new Device.CAN(17, "rio");
 
@@ -38,6 +37,6 @@ public class Ports {
 
     public static final Device.CAN PDH = new Device.CAN(25, "rio");
 
-    public static final Device.CAN TOUNGE = new Device.CAN(30, "rio");
+    public static final Device.CAN TONGUE = new Device.CAN(30, "rio");
 
 }

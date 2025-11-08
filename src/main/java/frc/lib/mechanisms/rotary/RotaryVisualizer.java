@@ -10,10 +10,15 @@ import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.Rotations;
+import java.util.Optional;
+import java.util.function.Supplier;
+import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.mechanism.LoggedMechanism2d;
 import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
 import org.littletonrobotics.junction.mechanism.LoggedMechanismRoot2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
@@ -34,11 +39,22 @@ public class RotaryVisualizer {
     private final LoggedMechanismLigament2d upperBound;
     private final String name;
 
+    private final double armLength;
+
+    private final Pose3d offset;
+    private Pose3d currentPose = new Pose3d();
+
+    private final RotaryMechCharacteristics constants;
+
     public RotaryVisualizer(String name, RotaryMechCharacteristics constants)
     {
         this.name = name;
+        this.constants = constants;
         mechanism = new LoggedMechanism2d(3.0, 3.0, new Color8Bit(Color.kBlack));
         LoggedMechanismRoot2d root = mechanism.getRoot(name + " root", 1.5, 1.5);
+
+        armLength = constants.armLength().in(Meters);
+        offset = new Pose3d(constants.offset(), Rotation3d.kZero);
 
         if (constants.maxAngle().minus(constants.minAngle()).in(Rotations) < 1) {
             lowerBound =
@@ -65,16 +81,16 @@ public class RotaryVisualizer {
         }
 
         measured =
-            new LoggedMechanismLigament2d(name + "Measured", constants.armLength().in(Meters),
+            new LoggedMechanismLigament2d(name + "Measured", armLength,
                 constants.startingAngle().in(Radians), 3,
                 new Color8Bit(Color.kGreen));
 
         trajectory =
-            new LoggedMechanismLigament2d(name + "Trajectory", constants.armLength().in(Meters),
+            new LoggedMechanismLigament2d(name + "Trajectory", armLength,
                 constants.startingAngle().in(Radians), 3,
                 new Color8Bit(Color.kYellow));
 
-        goal = new LoggedMechanismLigament2d(name + "Goal", constants.armLength().in(Meters),
+        goal = new LoggedMechanismLigament2d(name + "Goal", armLength,
             constants.startingAngle().in(Radians), 3,
             new Color8Bit(Color.kRed));
 
@@ -83,32 +99,72 @@ public class RotaryVisualizer {
         root.append(measured);
         root.append(trajectory);
         root.append(goal);
+    }
 
+    private void update()
+    {
+        switch (constants.axis()) {
+            case ROLL:
+                currentPose = offset.rotateBy(
+                    new Rotation3d(Degrees.of(measured.getAngle()), Degrees.zero(),
+                        Degrees.zero()));
+                break;
+            case PITCH:
+                currentPose = offset.rotateBy(
+                    new Rotation3d(Degrees.zero(), Degrees.of(measured.getAngle()),
+                        Degrees.zero()));
+                break;
+            case YAW:
+                currentPose = offset.rotateBy(
+                    new Rotation3d(Degrees.zero(), Degrees.zero(),
+                        Degrees.of(measured.getAngle())));
+                break;
+
+            default:
+                break;
+        }
+
+        SmartDashboard.putData(name + " Visualizer", mechanism);
+        Logger.recordOutput(name + "Pose3d", currentPose);
     }
 
     public void setCurrentAngle(Angle angle)
     {
         measured.setAngle(Rotation2d.fromRadians(angle.in(Radians)));
 
-        SmartDashboard.putData(name + " Visualizer", mechanism);
+        update();
     }
 
-    public void setTrajectoryAngle(Angle angle)
+    public void setTrajectoryAngle(Optional<Angle> angle)
     {
-        if (angle != null) {
-            trajectory.setAngle(Rotation2d.fromRadians(angle.in(Radians)));
-        } else {
-            trajectory.setAngle(measured.getAngle());
+        if (angle.isEmpty()) {
+            trajectory.setLength(0.0);
         }
 
+        angle.ifPresent((a) -> {
+            trajectory.setLength(armLength);
+            trajectory.setAngle(a.in(Degrees));
+        });
 
-        SmartDashboard.putData(name + " Visualizer", mechanism);
+        update();
     }
 
-    public void setGoalAngle(Angle angle)
+    public void setGoalAngle(Optional<Angle> angle)
     {
-        goal.setAngle(Rotation2d.fromRadians(angle.in(Radians)));
+        if (angle.isEmpty()) {
+            goal.setLength(0.0);
+        }
 
-        SmartDashboard.putData(name + " Visualizer", mechanism);
+        angle.ifPresent((a) -> {
+            goal.setLength(armLength);
+            goal.setAngle(a.in(Degrees));
+        });
+
+        update();
+    }
+
+    public Supplier<Pose3d> getPoseSupplier()
+    {
+        return () -> currentPose;
     }
 }
