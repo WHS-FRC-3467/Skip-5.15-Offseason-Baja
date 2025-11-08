@@ -15,6 +15,7 @@
 
 package frc.robot.subsystems.vision;
 
+import static edu.wpi.first.units.Units.Feet;
 import static edu.wpi.first.units.Units.Meters;
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
@@ -25,6 +26,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
@@ -118,6 +120,8 @@ public class Vision extends SubsystemBase {
                 boolean rejectPose = observation.tagCount() == 0 // Must have at least one tag
                     || (observation.tagCount() == 1
                         && observation.ambiguity() > maxAmbiguity) // Cannot be high ambiguity
+                    || (observation.tagCount() == 1
+                        && observation.averageTagDistance().gte(Feet.of(10)))
                     || Math.abs(observation.pose().getZ()) > maxZError // Must have realistic Z
                                                                        // coordinate
 

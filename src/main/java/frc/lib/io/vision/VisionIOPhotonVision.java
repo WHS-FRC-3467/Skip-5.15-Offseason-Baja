@@ -19,18 +19,24 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.RobotState;
+import edu.wpi.first.wpilibj.Timer;
 import frc.lib.util.Timestamped;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Seconds;
+import java.lang.StackWalker.Option;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.lang3.ArrayUtils;
+import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.ConstrainedSolvepnpParams;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
@@ -39,6 +45,9 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 public class VisionIOPhotonVision implements VisionIO {
     protected final PhotonCamera camera;
     protected final PhotonPoseEstimator poseEstimator;
+
+    private final ConstrainedSolvepnpParams constrainedSolvepnpParams =
+        new ConstrainedSolvepnpParams(true, 0);
 
     /**
      * Creates a new VisionIOPhotonVision.
@@ -72,12 +81,21 @@ public class VisionIOPhotonVision implements VisionIO {
 
             allTargets.addAll(result.getTargets());
 
-            Optional<EstimatedRobotPose> optionalEstimate = poseEstimator.update(result);
+            // Optional<EstimatedRobotPose> optionalEstimate = poseEstimator.update(result);
+            poseEstimator.addHeadingData(Timer.getFPGATimestamp(),
+                frc.robot.RobotState.getInstance().getRotation());
+            Optional<EstimatedRobotPose> optionalEstimate =
+                poseEstimator.update(
+                    result,
+                    (camera.getCameraMatrix()),
+                    (camera.getDistCoeffs()),
+                    Optional.of(constrainedSolvepnpParams));
             if (optionalEstimate.isEmpty()) {
                 continue;
             }
 
             EstimatedRobotPose estimate = optionalEstimate.get();
+            Logger.recordOutput("Vision/Strat Used", estimate.strategy.toString());
 
             int tagCount = estimate.targetsUsed.size();
 
@@ -96,6 +114,7 @@ public class VisionIOPhotonVision implements VisionIO {
                 new PoseObservation(
                     Seconds.of(estimate.timestampSeconds),
                     estimate.estimatedPose,
+                    estimate.estimatedPose.getRotation().toRotation2d(),
                     averageAmbiguity,
                     tagCount,
                     averageDistance));

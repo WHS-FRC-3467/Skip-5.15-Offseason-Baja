@@ -17,6 +17,7 @@ package frc.lib.io.vision;
 
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Time;
 import frc.lib.util.Timestamped;
@@ -35,6 +36,7 @@ public interface VisionIO {
     public static record PoseObservation(
         Time timestamp,
         Pose3d pose,
+        Rotation2d heading,
         double ambiguity,
         int tagCount,
         Distance averageTagDistance) {

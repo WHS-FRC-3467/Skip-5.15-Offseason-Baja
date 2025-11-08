@@ -173,7 +173,7 @@ public class DriveConstants {
     private static final Distance kBackRightYPos = Inches.of(-11.375);
 
     public static final Angle kFrontLeftEncoderOffset = Rotations.of(-0.168212890625);
-    public static final Angle kFrontRightEncoderOffset = Rotations.of(0.0517578125);
+    public static final Angle kFrontRightEncoderOffset = Rotations.of(-0.4697265625);
     public static final Angle kBackLeftEncoderOffset = Rotations.of(-0.01513671875);
     public static final Angle kBackRightEncoderOffset = Rotations.of(-0.13330078125);
 
