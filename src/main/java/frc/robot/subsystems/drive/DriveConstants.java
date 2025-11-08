@@ -132,9 +132,9 @@ public class DriveConstants {
             .withDriveFrictionVoltage(kDriveFrictionVoltage);
 
     // Front Left
-    private static final int kFrontLeftDriveMotorId = 3;
-    private static final int kFrontLeftSteerMotorId = 2;
-    private static final int kFrontLeftEncoderId = 1;
+    private static final int kFrontLeftDriveMotorId = 11;
+    private static final int kFrontLeftSteerMotorId = 9;
+    private static final int kFrontLeftEncoderId = 10;
     private static final boolean kFrontLeftSteerMotorInverted = true;
     private static final boolean kFrontLeftEncoderInverted = false;
 
@@ -142,9 +142,9 @@ public class DriveConstants {
     private static final Distance kFrontLeftYPos = Inches.of(11.375);
 
     // Front Right
-    private static final int kFrontRightDriveMotorId = 1;
-    private static final int kFrontRightSteerMotorId = 0;
-    private static final int kFrontRightEncoderId = 0;
+    private static final int kFrontRightDriveMotorId = 7;
+    private static final int kFrontRightSteerMotorId = 5;
+    private static final int kFrontRightEncoderId = 6;
     private static final boolean kFrontRightSteerMotorInverted = true;
     private static final boolean kFrontRightEncoderInverted = false;
 
@@ -152,9 +152,9 @@ public class DriveConstants {
     private static final Distance kFrontRightYPos = Inches.of(-11.375);
 
     // Back Left
-    private static final int kBackLeftDriveMotorId = 7;
-    private static final int kBackLeftSteerMotorId = 6;
-    private static final int kBackLeftEncoderId = 3;
+    private static final int kBackLeftDriveMotorId = 14;
+    private static final int kBackLeftSteerMotorId = 12;
+    private static final int kBackLeftEncoderId = 13;
     private static final boolean kBackLeftSteerMotorInverted = true;
     private static final boolean kBackLeftEncoderInverted = false;
 
@@ -162,9 +162,9 @@ public class DriveConstants {
     private static final Distance kBackLeftYPos = Inches.of(11.375);
 
     // Back Right
-    private static final int kBackRightDriveMotorId = 5;
-    private static final int kBackRightSteerMotorId = 4;
-    private static final int kBackRightEncoderId = 2;
+    private static final int kBackRightDriveMotorId = 4;
+    private static final int kBackRightSteerMotorId = 2;
+    private static final int kBackRightEncoderId = 3;
     private static final boolean kBackRightSteerMotorInverted = true;
     private static final boolean kBackRightEncoderInverted = false;
 
